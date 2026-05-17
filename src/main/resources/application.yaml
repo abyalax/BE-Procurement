@@ -2,6 +2,9 @@ spring:
   application:
     name: procurement
 
+  config:
+    import: optional:file:.env[.properties]
+
   datasource:
     url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:db_procurement}
     username: ${POSTGRES_USER:postgres}
@@ -40,10 +43,10 @@ server:
 app:
   jwt:
     secret: ${JWT_SECRET}
-    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+    expiration-ms: ${JWT_EXPIRATION_MS}
   seed:
-    admin-email: ${DEFAULT_ADMIN_EMAIL:admin@procurement.local}
-    admin-password: ${DEFAULT_ADMIN_PASSWORD:Admin12345!}
+    admin-email: ${DEFAULT_ADMIN_EMAIL}
+    admin-password: ${DEFAULT_ADMIN_PASSWORD}
 
 springdoc:
   api-docs:

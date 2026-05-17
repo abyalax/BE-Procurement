@@ -3,24 +3,27 @@ package com.procurement.common.config;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.*;
+import io.swagger.v3.oas.models.Components;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class OpenApiConfig {
 
-    @Bean
-    OpenAPI procurementOpenApi() {
-        String securitySchemeName = "bearerAuth";
+        private static final String SECURITY_SCHEME_NAME = "bearerAuth";
 
-        return new OpenAPI()
-                .info(new Info().title("Procurement API").version("v1")
-                        .description("API documentation for Procurement application"))
-                .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
-                .components(new io.swagger.v3.oas.models.Components()
-                        .addSecuritySchemes(securitySchemeName,
-                                new SecurityScheme().name(securitySchemeName)
-                                        .type(SecurityScheme.Type.HTTP).scheme("bearer")
-                                        .bearerFormat("JWT")));
-    }
+        @Bean
+        OpenAPI procurementOpenApi() {
+                Info apiInfo = new Info().title("Procurement API").version("v1")
+                                .description("API documentation for Procurement application");
+
+                SecurityRequirement securityRequirement = new SecurityRequirement().addList(SECURITY_SCHEME_NAME);
+
+                SecurityScheme bearerSecurityScheme = new SecurityScheme().name(SECURITY_SCHEME_NAME)
+                                .type(SecurityScheme.Type.HTTP).scheme("bearer").bearerFormat("JWT");
+
+                Components components = new Components().addSecuritySchemes(SECURITY_SCHEME_NAME, bearerSecurityScheme);
+
+                return new OpenAPI().info(apiInfo).addSecurityItem(securityRequirement).components(components);
+        }
 }
