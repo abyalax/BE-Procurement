@@ -8,9 +8,9 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties(prefix = "app.seed")
 public record SeedProperties(
-        @NotBlank(message = "Default admin email is required") String adminEmail,
+  @NotBlank(message = "Default admin email is required") String adminEmail,
 
-        @NotBlank(message = "Default admin password is required")
-        @Size(min = 8, message = "Default admin password must be at least 8 characters")
-        String adminPassword) {
-}
+  @NotBlank(message = "Default admin password is required")
+  @Size(min = 8, message = "Default admin password must be at least 8 characters")
+  String adminPassword
+) {}

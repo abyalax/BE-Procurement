@@ -1,11 +1,10 @@
 package com.procurement.modules.role_permissions.entities;
 
 import jakarta.persistence.*;
-import lombok.*;
-
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import lombok.*;
 
 @Getter
 @Setter
@@ -15,38 +14,39 @@ import java.util.Set;
 @Entity
 @Table(name = "permissions")
 public class Permission {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
-    @Column(name = "permission_key", nullable = false, unique = true, length = 120)
-    private String key;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(name = "name", nullable = false, unique = true, length = 120)
-    private String name;
+  @Column(name = "permission_key", nullable = false, unique = true, length = 120)
+  private String key;
 
-    @Column(name = "description", length = 255)
-    private String description;
+  @Column(name = "name", nullable = false, unique = true, length = 120)
+  private String name;
 
-    @OneToMany(mappedBy = "permission", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private Set<RolePermission> rolePermissions = new HashSet<>();
+  @Column(name = "description", length = 255)
+  private String description;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+  @OneToMany(mappedBy = "permission", cascade = CascadeType.ALL, orphanRemoval = true)
+  @Builder.Default
+  private Set<RolePermission> rolePermissions = new HashSet<>();
 
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+  @Column(name = "created_at", nullable = false, updatable = false)
+  private LocalDateTime createdAt;
 
-    @PrePersist
-    void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
-        this.createdAt = now;
-        this.updatedAt = now;
-    }
+  @Column(name = "updated_at", nullable = false)
+  private LocalDateTime updatedAt;
 
-    @PreUpdate
-    void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
+  @PrePersist
+  void onCreate() {
+    LocalDateTime now = LocalDateTime.now();
+    this.createdAt = now;
+    this.updatedAt = now;
+  }
+
+  @PreUpdate
+  void onUpdate() {
+    this.updatedAt = LocalDateTime.now();
+  }
 }

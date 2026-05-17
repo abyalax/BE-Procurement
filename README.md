@@ -43,6 +43,128 @@ The application expects PostgreSQL on `POSTGRES_PORT` and Redis on `REDIS_PORT`.
 
 `spring-boot:run` works with DevTools, but the JVM only restarts after compiled classes change. If edits do not trigger reload, enable automatic build in your IDE so `.java` changes are compiled into `target/classes` on save.
 
+## Code Formatter
+
+This project uses Prettier with Java plugin for consistent code formatting across the team.
+
+### Required VSCode Extension
+
+Install the following extension:
+
+* [Prettier Java VSCode Extension](https://marketplace.visualstudio.com/items?itemName=rudrapatel.prettier-plugin-java-vscode&utm_source=chatgpt.com)
+
+Project extension recommendations are already configured in:
+
+```txt
+.vscode/extensions.json
+```
+
+---
+
+## Formatter Setup
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Formatter dependencies:
+
+```json
+{
+  "devDependencies": {
+    "prettier": "^3.x",
+    "prettier-plugin-java": "^2.x"
+  }
+}
+```
+
+---
+
+## Format All Java Files
+
+Run formatter manually:
+
+```bash
+npm run format
+```
+
+Script configuration:
+
+```json
+{
+  "scripts": {
+    "format": "prettier --config .prettierrc --write \"src/**/*.java\""
+  }
+}
+```
+
+---
+
+## VSCode Settings
+
+Workspace formatter configuration:
+
+```json
+{
+  "[java]": {
+    "editor.defaultFormatter": "rudrapatel.prettier-plugin-java-vscode"
+  },
+  "editor.formatOnSave": true,
+  "prettier-plugin-java-vscode.prettierConfigPath": ".prettierrc"
+}
+```
+
+Location:
+
+```txt
+.vscode/settings.json
+```
+
+---
+
+## Formatter Configuration
+
+Formatter rules are configured in:
+
+```txt
+.prettierrc
+```
+
+Example:
+
+```json
+{
+    "tabWidth": 2,
+    "useTabs": false,
+    "trailingComma": "all",
+    "printWidth": 100
+}
+```
+
+---
+
+## Usage
+
+### Format on Save
+
+Save `.java` file and formatter will run automatically.
+
+### Manual Format
+
+VSCode shortcut:
+
+```txt
+Shift + Alt + F
+```
+
+Or use:
+
+```bash
+npm run format
+```
+
 ## Notes
 
 - The API is guarded by permission checks such as `users:read`, `users:write`, `roles:read`, and `roles:write`.
@@ -81,4 +203,4 @@ While most of the inheritance is fine, it also inherits unwanted elements like `
 To prevent this, the project POM contains empty overrides for these elements.
 If you manually switch to a different parent and actually want the inheritance, you need to remove those overrides.
 
-_last Updated at 16 May 2026_
+_last Updated at 17 May 2026_

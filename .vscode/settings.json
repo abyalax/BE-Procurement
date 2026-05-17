@@ -1,0 +1,11 @@
+{
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "[java]": {
+        "editor.defaultFormatter": "RudraPatel.prettier-plugin-java-vscode"
+    },
+    "java.format.settings.url": "",
+    "java.format.enabled": false,
+    "java.format.onType.enabled": false,
+    "java.format.comments.enabled": false,
+    "prettier-plugin-java-vscode.prettierConfigPath": ".prettierrc",
+}

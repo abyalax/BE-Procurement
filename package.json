@@ -1,0 +1,19 @@
+{
+  "name": "be",
+  "version": "1.0.0",
+  "description": "Spring Boot 4 backend for procurement workflows. The service uses PostgreSQL for persistence, Redis for caching, Flyway for schema migration, and JWT-based security for auth and protected endpoints. Development reload is enabled through Spring Boot DevTools.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "format": "prettier --config .prettierrc --plugin prettier-plugin-java --write \"src/**/*.java\""
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "prettier-plugin-java": "^2.8.0"
+  }
+}
