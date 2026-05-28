@@ -3,24 +3,27 @@ package com.procurement.modules.users.services;
 import com.procurement.common.exception.BadRequestException;
 import com.procurement.common.exception.ConflictException;
 import com.procurement.common.exception.NotFoundException;
+import com.procurement.common.pagination.PaginationSort;
 import com.procurement.common.response.PageResponse;
 import com.procurement.modules.role_permissions.entities.Permission;
 import com.procurement.modules.role_permissions.entities.Role;
 import com.procurement.modules.role_permissions.entities.RolePermission;
 import com.procurement.modules.role_permissions.repositories.RoleRepository;
+import com.procurement.modules.users.dto.CreateUserRequest;
 import com.procurement.modules.users.dto.UpdateUserRequest;
 import com.procurement.modules.users.dto.UserResponse;
 import com.procurement.modules.users.entities.User;
 import com.procurement.modules.users.repositories.UserRepository;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.*;
 import org.springframework.cache.annotation.*;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,19 +32,40 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
   private static final Logger log = LoggerFactory.getLogger(UserService.class);
+  private static final Map<String, String> SORT_FIELDS = Map.of(
+    "id",
+    "id",
+    "name",
+    "name",
+    "email",
+    "email",
+    "status",
+    "status",
+    "createdAt",
+    "createdAt",
+    "updatedAt",
+    "updatedAt"
+  );
 
   private final UserRepository userRepository;
   private final RoleRepository roleRepository;
+  private final PasswordEncoder passwordEncoder;
 
-  @Cacheable(value = "users", key = "'page:' + #page + ':size:' + #size")
-  public PageResponse<UserResponse> getUsers(int page, int size) {
+  @Cacheable(
+    value = "users",
+    key = "'page:' + #page + ':limit:' + #limit + ':sortBy:' + #sortBy + ':sortOrder:' + #sortOrder"
+  )
+  public PageResponse<UserResponse> getUsers(int page, int limit, String sortBy, String sortOrder) {
     log.info("Fetching users from database");
 
-    int normalizedSize = Math.min(Math.max(size, 1), 100);
-    Pageable pageable = PageRequest.of(
-      Math.max(page, 0),
-      normalizedSize,
-      Sort.by(Sort.Direction.DESC, "createdAt")
+    Pageable pageable = PaginationSort.pageRequest(
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      SORT_FIELDS,
+      "createdAt",
+      Sort.Direction.DESC
     );
     return PageResponse.from(userRepository.findAll(pageable).map(this::toResponse));
   }
@@ -67,6 +91,30 @@ public class UserService {
 
   @Transactional
   @CacheEvict(value = "users", allEntries = true)
+  public UserResponse createUser(CreateUserRequest request) {
+    log.info("Creating user email={}", request.email());
+
+    String email = request.email().trim().toLowerCase();
+    if (userRepository.existsByEmail(email)) {
+      throw new ConflictException("Email already registered");
+    }
+
+    Set<Role> roles = resolveRoles(request.roles());
+    User user = userRepository.save(
+      User.builder()
+        .name(request.name().trim())
+        .email(email)
+        .password(passwordEncoder.encode(request.password()))
+        .status(com.procurement.modules.users.entities.UserStatus.ACTIVE)
+        .roles(roles)
+        .build()
+    );
+
+    return toResponse(user);
+  }
+
+  @Transactional
+  @CacheEvict(value = "users", allEntries = true)
   public UserResponse updateUser(Long id, UpdateUserRequest request) {
     log.info("Updating user id={}", id);
 
@@ -77,7 +125,7 @@ public class UserService {
     if (request.name() != null) user.setName(request.name().trim());
 
     if (request.email() != null) {
-      String email = request.email().toLowerCase();
+      String email = request.email().trim().toLowerCase();
       if (userRepository.existsByEmailAndIdNot(email, id)) {
         throw new ConflictException("Email already registered");
       }
@@ -89,14 +137,31 @@ public class UserService {
     }
 
     if (request.roles() != null) {
-      Set<Role> roles = roleRepository.requireAllByName(normalizeRoles(request.roles()));
-      if (roles.size() != request.roles().size()) {
-        throw new BadRequestException("One or more roles are invalid");
-      }
-      user.setRoles(roles);
+      user.setRoles(resolveRoles(request.roles()));
     }
 
     return toResponse(user);
+  }
+
+  @Transactional
+  @CacheEvict(value = "users", allEntries = true)
+  public void deactivateUser(Long id) {
+    User user = userRepository
+      .findById(id)
+      .orElseThrow(() -> new NotFoundException("User not found"));
+    user.setStatus(com.procurement.modules.users.entities.UserStatus.INACTIVE);
+  }
+
+  private Set<Role> resolveRoles(Set<String> requestedRoles) {
+    Set<String> normalizedRoles =
+      requestedRoles == null || requestedRoles.isEmpty()
+        ? Set.of("USER")
+        : normalizeRoles(requestedRoles);
+    Set<Role> roles = roleRepository.requireAllByName(normalizedRoles);
+    if (roles.size() != normalizedRoles.size()) {
+      throw new BadRequestException("One or more roles are invalid");
+    }
+    return roles;
   }
 
   private UserResponse toResponse(User user) {

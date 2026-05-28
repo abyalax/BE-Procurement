@@ -12,8 +12,8 @@ http:
     type: json
     data: |-
       {
-        "email": "",
-        "password": ""
+        "email": "admin@procurement.local",
+        "password": "password"
       }
   auth: inherit
 

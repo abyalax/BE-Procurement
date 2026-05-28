@@ -1,7 +1,7 @@
 {
   "name": "be",
   "version": "1.0.0",
-  "description": "Spring Boot 4 backend for procurement workflows. The service uses PostgreSQL for persistence, Redis for caching, Flyway for schema migration, and JWT-based security for auth and protected endpoints. Development reload is enabled through Spring Boot DevTools.",
+  "description": "Spring Boot 4 backend for procurement workflows. The service uses PostgreSQL for persistence, Redis for caching, Liquibase for schema migration, and JWT-based security for auth and protected endpoints. Development reload is enabled through Spring Boot DevTools.",
   "main": "index.js",
   "directories": {
     "doc": "docs"

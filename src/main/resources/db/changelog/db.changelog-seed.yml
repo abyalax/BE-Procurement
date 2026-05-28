@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/003-seed-default-access-data.sql
+  - include:
+      file: db/changelog/changes/004-seed-procurement-roles.sql
+  - include:
+      file: db/changelog/changes/005-seed-role-users.sql

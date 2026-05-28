@@ -8,7 +8,7 @@ This is a Java 21 Spring Boot Maven backend for `com.procurement`. Application c
 - `common/config`: shared Spring configuration such as cache, OpenAPI, and seed data.
 - `common/response`: reusable API response types.
 - `src/main/resources/application.yaml`: Spring, database, Redis, JWT, and OpenAPI configuration.
-- `src/main/resources/db/migrations`: Flyway SQL migrations.
+- `src/main/resources/db/changelog`: Liquibase master changelog and formatted SQL migrations.
 - `src/test/java`: JUnit/Spring Boot tests.
 - `docs`: project documentation.
 
@@ -23,7 +23,9 @@ Use the Maven wrapper when possible:
 
 On Windows, use `mvnw.cmd` or the installed `mvn.cmd` if wrapper execution is blocked. `test` runs the Spring Boot test suite, `spring-boot:run` starts the API locally, and `clean package` builds the deployable jar in `target/`.
 
-Use `docker compose up -d` to start local PostgreSQL and Redis services defined in `docker-compose.yaml`.
+Docker commands are restricted in the Codex sandbox for this repository. For every Docker command, including `docker compose up`, `docker compose up -d`, `docker compose down`, Docker CLI checks, or container inspection, ask the user to run it manually and continue only after the user confirms the required services are running. Do not attempt to run Docker commands from the sandbox.
+
+PostgreSQL and Redis services are defined in `docker-compose.yaml`. When they are needed, ask the user to start them manually with `docker compose up -d` from this backend directory.
 
 ## Coding Style & Naming Conventions
 Follow standard Java and Spring conventions: 4-space indentation, `PascalCase` classes, `camelCase` fields and methods, and lowercase package names. Keep controllers thin, put business rules in services, and keep persistence concerns in repositories/entities. DTOs should end with `Request`, `Response`, or another clear role suffix.
@@ -39,4 +41,4 @@ The current history uses Conventional Commit style, for example `feat: init repo
 Pull requests should include a short description, linked issue when applicable, database migration notes, configuration changes, and test results. Include screenshots only for API documentation or UI-visible changes.
 
 ## Security & Configuration Tips
-Do not commit real secrets. Keep local values in `.env`, especially `JWT_SECRET`, database credentials, and port overrides. When adding migrations, ensure Flyway locations in `application.yaml` match the migration directory.
+Do not commit real secrets. Keep local values in `.env`, especially `JWT_SECRET`, database credentials, and port overrides. When adding migrations, include formatted SQL files from the Liquibase master changelog.

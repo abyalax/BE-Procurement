@@ -19,9 +19,9 @@ spring:
       hibernate:
         format_sql: true
 
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
+  liquibase:
+    enabled: ${LIQUIBASE_ENABLED:false}
+    change-log: classpath:db/changelog/db.changelog-master.yml
 
   data:
     redis:
@@ -44,10 +44,18 @@ app:
   jwt:
     secret: ${JWT_SECRET}
     expiration-ms: ${JWT_EXPIRATION_MS}
-  seed:
-    admin-email: ${DEFAULT_ADMIN_EMAIL}
-    admin-password: ${DEFAULT_ADMIN_PASSWORD}
-
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+      - http://localhost:3001
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:3001
+  jobs:
+    rfq-expiry:
+      enabled: ${RFQ_EXPIRY_JOB_ENABLED:true}
+      fixed-delay-ms: ${RFQ_EXPIRY_JOB_FIXED_DELAY_MS:60000}
+      initial-delay-ms: ${RFQ_EXPIRY_JOB_INITIAL_DELAY_MS:10000}
+      batch-size: ${RFQ_EXPIRY_JOB_BATCH_SIZE:100}
 springdoc:
   api-docs:
     path: /v3/api-docs

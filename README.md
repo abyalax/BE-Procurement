@@ -1,6 +1,6 @@
 # Procurement Backend
 
-Spring Boot 4 backend for procurement workflows. The service uses PostgreSQL for persistence, Redis for caching, Flyway for schema migration, and JWT-based security for auth and protected endpoints. Development reload is enabled through Spring Boot DevTools.
+Spring Boot 4 backend for procurement workflows. The service uses PostgreSQL for persistence, Redis for caching, Liquibase for schema migration, and JWT-based security for auth and protected endpoints. Development reload is enabled through Spring Boot DevTools.
 
 ## Project Layout
 
@@ -10,7 +10,7 @@ Spring Boot 4 backend for procurement workflows. The service uses PostgreSQL for
 - `src/main/java/com/procurement/modules/role_permissions`: role and permission management.
 - `src/main/java/com/procurement/common`: shared config, middleware, exceptions, and API response types.
 - `src/main/resources/application.yaml`: runtime configuration.
-- `src/main/resources/db/migration`: Flyway SQL migrations.
+- `src/main/resources/db/changelog`: Liquibase master changelog and formatted SQL migrations.
 - `src/test/java`: Spring Boot tests.
 
 ## Run Commands
@@ -37,7 +37,50 @@ Create or update `.env` with PostgreSQL, Redis, JWT, and seed credentials before
 
 Default local values are already provided in `.env.example`.
 
-The application expects PostgreSQL on `POSTGRES_PORT` and Redis on `REDIS_PORT`. Flyway runs automatically on startup and seeds default roles, permissions, and an admin user.
+The application expects PostgreSQL on `POSTGRES_PORT` and Redis on `REDIS_PORT`. Liquibase is disabled by default on startup, and schema migration plus seed data are run manually through the maintenance application.
+
+## Liquibase Migration Workflow
+
+### Create a new migration
+
+Add a new formatted SQL file under `src/main/resources/db/changelog/changes` and include it from `src/main/resources/db/changelog/db.changelog-master.yml`.
+
+```txt
+003-add_purchase_order_status.sql
+```
+
+Rules to follow:
+
+- Use the next unused numeric prefix.
+- Start the SQL file with `--liquibase formatted sql` and a unique `--changeset` line.
+- Keep the filename stable after it has been committed and applied.
+- Do not edit an applied migration file unless you also reset the local database. For shared databases, add a new forward migration instead.
+
+### Run migrations
+
+Run migrations manually with the maintenance application:
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.main-class=com.procurement.tools.DatabaseMaintenanceApplication -Dspring-boot.run.arguments="--maintenance.command=migrate"
+```
+
+On Windows:
+
+```bash
+mvnw.cmd spring-boot:run -Dspring-boot.run.main-class=com.procurement.tools.DatabaseMaintenanceApplication -Dspring-boot.run.arguments="--maintenance.command=migrate"
+```
+
+Liquibase reads `src/main/resources/db/changelog/db.changelog-master.yml`, which currently includes only schema changes.
+
+### Revert a migration
+
+Liquibase does not automatically undo an applied SQL migration during normal startup. The recommended workflow is:
+
+1. Create a new migration that reverses the previous schema change.
+2. Include it from the master changelog.
+3. Start the application again so Liquibase applies the new migration.
+
+Example: if `003` added a column, create `004-revert_003.sql` or a forward-fixing migration that restores the desired schema.
 
 ## Dev Reload
 
@@ -169,7 +212,8 @@ npm run format
 
 - The API is guarded by permission checks such as `users:read`, `users:write`, `roles:read`, and `roles:write`.
 - Use `GET /api/v1/users?page=0&size=20` for paginated user lists.
-- Keep migration files in `src/main/resources/db/migration` using Flyway naming like `V1__description.sql`.
+- Keep migration files in `src/main/resources/db/changelog/changes` and include them from `db.changelog-master.yml`.
+- Never edit a migration file that has already been applied to a shared database. Add a new version instead.
 
 ### Reference Documentation
 For further reference, please consider the following sections:

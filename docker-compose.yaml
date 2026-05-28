@@ -27,9 +27,56 @@ services:
     networks:
       - procurement-network
 
+  mailpit:
+      image: axllent/mailpit:latest
+      container_name: procurement-mailpit
+      ports:
+        - "${MAILPIT_SMTP_PORT:-1025}:1025"
+        - "${MAILPIT_UI_PORT:-8025}:8025"
+      environment:
+        - MP_MAX_MESSAGES=${MAILPIT_MAX_MESSAGES:-1000}
+        - MP_SMTP_AUTH_ACCEPT_ANY=${MAILPIT_SMTP_AUTH_ACCEPT_ANY:-true}
+        - MP_SMTP_AUTH_USERNAME=${MAILPIT_USER:-procurement-mailpit}
+        - MP_SMTP_AUTH_PASSWORD=${MAILPIT_PASSWORD:-procurement-mailpit}
+        - MP_OUTGOING_HOST=${MAILPIT_HOST:-localhost}
+        - MP_OUTGOING_PORT=${MAILPIT_PORT:-1025}
+        - MP_OUTGOING_SECURE=${MAILPIT_SECURE:-false}
+        - MP_DEFAULT_FROM_EMAIL=${MAILPIT_FROM_EMAIL:-procurements@vest.com}
+        - MP_DEFAULT_FROM_NAME=${MAILPIT_FROM_NAME:-procurements}
+      volumes:
+        - procurement_mailpit_data:/var/lib/mailpit/data
+      command: ["--smtp-auth-allow-insecure"]
+      networks:
+      - procurement-network
+
+  dbgate:
+    image: dbgate/dbgate
+    container_name: procurement-dbms
+    restart: "no"
+    depends_on:
+      - postgres
+    ports:
+      - "8090:3000"
+    volumes:
+      - procurement_dbgate_data:/var/lib/dbgate/data
+    networks:
+      - procurement-network
+    environment:
+      PORT: 3000
+      CONNECTIONS: POSTGRES
+      LABEL_POSTGRES: Postgres
+      SERVER_POSTGRES: postgres
+      USER_POSTGRES: ${POSTGRES_USER}
+      PASSWORD_POSTGRES: ${POSTGRES_PASSWORD}
+      PORT_POSTGRES: 5432
+      ENGINE_POSTGRES: postgres@dbgate-plugin-postgres
+      DATABASE_POSTGRES: ${POSTGRES_DB}
+
 volumes:
   procurement_postgres_data:
   procurement_redis_data:
+  procurement_mailpit_data:
+  procurement_dbgate_data:
 
 networks:
   procurement-network:
