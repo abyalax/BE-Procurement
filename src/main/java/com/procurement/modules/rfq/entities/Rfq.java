@@ -3,6 +3,8 @@ package com.procurement.modules.rfq.entities;
 import com.procurement.modules.pr.entities.PurchaseRequisition;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.*;
 
 @Getter
@@ -40,6 +42,11 @@ public class Rfq {
   @Column(name = "failure_reason", columnDefinition = "text")
   private String failureReason;
 
+  @OneToMany(mappedBy = "rfq", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OrderBy("lineNo ASC")
+  @Builder.Default
+  private List<RfqItem> items = new ArrayList<>();
+
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
 
@@ -56,5 +63,10 @@ public class Rfq {
   @PreUpdate
   void onUpdate() {
     updatedAt = LocalDateTime.now();
+  }
+
+  public void addItem(RfqItem item) {
+    item.setRfq(this);
+    items.add(item);
   }
 }

@@ -8,4 +8,5 @@
     "java.format.onType.enabled": false,
     "java.format.comments.enabled": false,
     "prettier-plugin-java-vscode.prettierConfigPath": ".prettierrc",
+    "java.compile.nullAnalysis.mode": "automatic",
 }

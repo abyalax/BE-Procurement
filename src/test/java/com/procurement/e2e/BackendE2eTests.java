@@ -192,19 +192,22 @@ class BackendE2eTests extends AbstractE2eTest {
         "Finance",
         "requestedBy",
         user("employee@procurement.local"),
-        "amount",
-        "1500000",
-        "quantity",
-        "10",
         "emergency",
         false,
         "justification",
-        "Replacement devices"
+        "Replacement devices",
+        "items",
+        List.of(
+          prItem("GOODS", "Finance laptop", "9", "150000"),
+          prItem("SERVICE", "Device setup service", "1", "150000")
+        )
       ),
       token
     );
     long prId = pr.path("id").asLong();
     assertThat(pr.path("status").asText()).isEqualTo("DRAFT");
+    assertThat(pr.path("totalEstimatedAmount").decimalValue()).isEqualByComparingTo("1500000");
+    assertThat(pr.path("items")).hasSize(2);
 
     JsonNode submittedPr = postData(
       "/api/v1/pr/" + prId + "/submit",
@@ -241,6 +244,8 @@ class BackendE2eTests extends AbstractE2eTest {
     );
     long rfqId = rfq.path("id").asLong();
     assertThat(rfq.path("status").asText()).isEqualTo("ACTIVE");
+    assertThat(rfq.path("items")).hasSize(2);
+    assertThat(rfq.path("items").path(0).path("itemName").asText()).isEqualTo("Finance laptop");
 
     JsonNode invitation = postData(
       "/api/v1/rfqs/" + rfqId + "/vendors/1/accept",
@@ -386,14 +391,12 @@ class BackendE2eTests extends AbstractE2eTest {
         "Operations",
         "requestedBy",
         user("employee@procurement.local"),
-        "amount",
-        "1500000",
-        "quantity",
-        "1",
         "emergency",
         false,
         "justification",
-        "Transition guard"
+        "Transition guard",
+        "items",
+        List.of(prItem("SERVICE", "Transition support", "1", "1500000"))
       ),
       token
     );
@@ -486,6 +489,28 @@ class BackendE2eTests extends AbstractE2eTest {
 
   private static Map<String, Object> decision(String actor, String notes) {
     return Map.of("actor", user(actor), "notes", notes);
+  }
+
+  private static Map<String, Object> prItem(
+    String itemType,
+    String itemName,
+    String quantity,
+    String estimatedUnitPrice
+  ) {
+    return Map.of(
+      "itemType",
+      itemType,
+      "itemName",
+      itemName,
+      "specification",
+      itemName + " specification",
+      "quantity",
+      quantity,
+      "unitOfMeasure",
+      "EA",
+      "estimatedUnitPrice",
+      estimatedUnitPrice
+    );
   }
 
   private static Map<String, Object> user(String email) {

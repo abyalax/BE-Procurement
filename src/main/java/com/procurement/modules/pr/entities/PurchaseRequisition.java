@@ -2,7 +2,10 @@ package com.procurement.modules.pr.entities;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.*;
 
 @Getter
@@ -18,6 +21,9 @@ public class PurchaseRequisition {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
+  @Column(name = "pr_number", unique = true, length = 80)
+  private String prNumber;
+
   @Column(nullable = false, length = 180)
   private String title;
 
@@ -30,11 +36,9 @@ public class PurchaseRequisition {
   @Column(name = "requested_by", nullable = false, length = 160)
   private String requestedBy;
 
-  @Column(nullable = false, precision = 18, scale = 2)
-  private BigDecimal amount;
-
-  @Column(nullable = false, precision = 18, scale = 2)
-  private BigDecimal quantity;
+  @Column(name = "total_estimated_amount", nullable = false, precision = 18, scale = 2)
+  @Builder.Default
+  private BigDecimal totalEstimatedAmount = BigDecimal.ZERO;
 
   @Column(nullable = false, length = 40)
   @Builder.Default
@@ -46,11 +50,22 @@ public class PurchaseRequisition {
   @Column(nullable = false)
   private boolean emergency;
 
+  @Column(name = "required_date")
+  private LocalDate requiredDate;
+
   @Column(columnDefinition = "text")
   private String justification;
 
+  @Column(name = "procurement_review_notes", columnDefinition = "text")
+  private String procurementReviewNotes;
+
   @Column(name = "cancellation_reason", columnDefinition = "text")
   private String cancellationReason;
+
+  @OneToMany(mappedBy = "purchaseRequisition", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OrderBy("lineNo ASC")
+  @Builder.Default
+  private List<PurchaseRequisitionItem> items = new ArrayList<>();
 
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
@@ -68,5 +83,22 @@ public class PurchaseRequisition {
   @PreUpdate
   void onUpdate() {
     updatedAt = LocalDateTime.now();
+  }
+
+  public void replaceItems(List<PurchaseRequisitionItem> replacementItems) {
+    items.clear();
+    replacementItems.forEach(this::addItem);
+  }
+
+  public void addItem(PurchaseRequisitionItem item) {
+    item.setPurchaseRequisition(this);
+    items.add(item);
+  }
+
+  public BigDecimal totalRequestedQuantity() {
+    return items
+      .stream()
+      .map(PurchaseRequisitionItem::getQuantity)
+      .reduce(BigDecimal.ZERO, BigDecimal::add);
   }
 }

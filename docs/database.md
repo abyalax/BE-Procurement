@@ -58,6 +58,7 @@ Schema changelog files are:
 
 1. `001-init-auth-users-roles-permissions.sql`
 2. `002-procurement-workflow-foundation.sql`
+3. `006-redesign-purchase-requisitions.sql`
 
 ### Down
 
@@ -265,26 +266,62 @@ Key fields:
 
 #### `purchase_requisitions`
 
-Stores purchase requisitions.
+Stores purchase requisition document headers.
 
 Key fields:
 
+- `pr_number` unique when present
 - `title`
 - `description`
 - `department`
 - `requested_by`
-- `amount`
-- `quantity`
+- `total_estimated_amount`
 - `status`
 - `stage`
 - `emergency`
+- `required_date`
 - `justification`
+- `procurement_review_notes`
 - `cancellation_reason`
 - timestamps
 
 Indexes:
 
 - `idx_pr_status`
+
+#### `purchase_requisition_items`
+
+Stores requested goods and services for a purchase requisition.
+
+Key fields:
+
+- `pr_id` references `purchase_requisitions(id)` with cascade delete
+- `line_no`
+- `item_type` as `GOODS` or `SERVICE`
+- `item_name`
+- `description`
+- `specification`
+- `quantity`
+- `unit_of_measure`
+- `estimated_unit_price`
+- `estimated_total_amount`
+- `required_date`
+- `delivery_location`
+- `budget_code`
+- `notes`
+- timestamps
+
+Constraints:
+
+- unique pair on `(pr_id, line_no)`
+- quantity must be greater than zero
+- estimated unit price must not be negative
+
+Indexes:
+
+- `idx_pr_items_pr`
+- `idx_pr_items_type`
+- `idx_pr_items_required_date`
 
 #### `rfqs`
 
@@ -305,6 +342,21 @@ Indexes:
 
 - `idx_rfqs_pr`
 - `idx_rfqs_status`
+
+#### `rfq_items`
+
+Stores RFQ line snapshots copied from PR items when an RFQ is created.
+
+Constraints:
+
+- `rfq_id` references `rfqs(id)` with cascade delete
+- `pr_item_id` references `purchase_requisition_items(id)`
+- unique pair on `(rfq_id, line_no)`
+
+Indexes:
+
+- `idx_rfq_items_rfq`
+- `idx_rfq_items_pr_item`
 
 #### `rfq_vendor_invitations`
 
@@ -422,4 +474,4 @@ Indexes:
 - Table names in the entities match the Liquibase migrations.
 - The schema is intentionally forward-only in code. Any structural rollback should be handled with a new migration.
 
-_Last Updated 19 May 2026_
+_Last Updated 29 May 2026_

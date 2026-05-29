@@ -3,3 +3,5 @@ databaseChangeLog:
       file: db/changelog/changes/001-init-auth-users-roles-permissions.sql
   - include:
       file: db/changelog/changes/002-procurement-workflow-foundation.sql
+  - include:
+      file: db/changelog/changes/006-redesign-purchase-requisitions.sql

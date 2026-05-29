@@ -186,7 +186,8 @@ public class QcfService {
       .filter(QcfLine::isRecommendation)
       .findFirst()
       .map(QcfLine::getAmount)
-      .orElse(pr.getAmount());
+      .orElse(pr.getTotalEstimatedAmount());
+    BigDecimal quantity = pr.totalRequestedQuantity();
     PurchaseOrder po = purchaseOrderRepository.save(
       PurchaseOrder.builder()
         .qcf(qcf)
@@ -194,8 +195,8 @@ public class QcfService {
         .vendor(qcf.getRecommendedVendor())
         .poNumber("PO-" + qcf.getId())
         .amount(amount)
-        .quantity(pr.getQuantity())
-        .remainingQuantity(pr.getQuantity())
+        .quantity(quantity)
+        .remainingQuantity(quantity)
         .status("OPEN")
         .stage("Delivery")
         .build()

@@ -5,6 +5,7 @@ import com.procurement.common.pagination.PaginationSort;
 import com.procurement.common.response.PageResponse;
 import com.procurement.modules.audit.services.AuditService;
 import com.procurement.modules.pr.entities.PurchaseRequisition;
+import com.procurement.modules.pr.entities.PurchaseRequisitionItem;
 import com.procurement.modules.pr.repositories.PurchaseRequisitionRepository;
 import com.procurement.modules.qcf.repositories.QcfDocumentRepository;
 import com.procurement.modules.rfq.dto.*;
@@ -59,10 +60,12 @@ public class RfqService {
   private final VendorRepository vendorRepository;
   private final AuditService auditService;
 
+  @Transactional(readOnly = true)
   public RfqResponse getById(Long id) {
     return RfqResponse.from(require(id));
   }
 
+  @Transactional(readOnly = true)
   public PageResponse<RfqResponse> getRfqs(int page, int limit, String sortBy, String sortOrder) {
     Pageable pageable = PaginationSort.pageRequest(
       page,
@@ -92,14 +95,17 @@ public class RfqService {
     );
 
     Rfq rfq = rfqRepository.save(
-      Rfq.builder()
-        .purchaseRequisition(pr)
-        .title(request.title().trim())
-        .description(request.description())
-        .deadline(request.deadline())
-        .status("ACTIVE")
-        .stage("Vendor Response")
-        .build()
+      snapshotItems(
+        Rfq.builder()
+          .purchaseRequisition(pr)
+          .title(request.title().trim())
+          .description(request.description())
+          .deadline(request.deadline())
+          .status("ACTIVE")
+          .stage("Vendor Response")
+          .build(),
+        pr
+      )
     );
 
     inviteVendors(rfq, request.vendorIds());
@@ -426,6 +432,31 @@ public class RfqService {
         RfqVendorInvitation.builder().rfq(rfq).vendor(vendor).status("INVITED").build()
       );
     }
+  }
+
+  private Rfq snapshotItems(Rfq rfq, PurchaseRequisition pr) {
+    if (pr.getItems().isEmpty()) {
+      throw new BadRequestException("PR requires at least one item before RFQ creation");
+    }
+    for (PurchaseRequisitionItem prItem : pr.getItems()) {
+      rfq.addItem(
+        RfqItem.builder()
+          .purchaseRequisitionItem(prItem)
+          .lineNo(prItem.getLineNo())
+          .itemType(prItem.getItemType())
+          .itemName(prItem.getItemName())
+          .description(prItem.getDescription())
+          .specification(prItem.getSpecification())
+          .quantity(prItem.getQuantity())
+          .unitOfMeasure(prItem.getUnitOfMeasure())
+          .requiredDate(prItem.getRequiredDate())
+          .deliveryLocation(prItem.getDeliveryLocation())
+          .budgetCode(prItem.getBudgetCode())
+          .notes(prItem.getNotes())
+          .build()
+      );
+    }
+    return rfq;
   }
 
   private void failIfNoViableVendor(Rfq rfq) {

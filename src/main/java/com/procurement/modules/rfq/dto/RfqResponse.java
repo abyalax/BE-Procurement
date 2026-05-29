@@ -2,6 +2,7 @@ package com.procurement.modules.rfq.dto;
 
 import com.procurement.modules.rfq.entities.Rfq;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record RfqResponse(
   Long id,
@@ -12,6 +13,7 @@ public record RfqResponse(
   String status,
   String stage,
   String failureReason,
+  List<RfqItemResponse> items,
   LocalDateTime createdAt,
   LocalDateTime updatedAt
 ) {
@@ -25,6 +27,7 @@ public record RfqResponse(
       rfq.getStatus(),
       rfq.getStage(),
       rfq.getFailureReason(),
+      rfq.getItems().stream().map(RfqItemResponse::from).toList(),
       rfq.getCreatedAt(),
       rfq.getUpdatedAt()
     );

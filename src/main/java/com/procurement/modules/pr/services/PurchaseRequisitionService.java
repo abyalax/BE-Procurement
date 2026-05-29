@@ -7,9 +7,11 @@ import com.procurement.common.utils.SearchUtils;
 import com.procurement.modules.audit.services.AuditService;
 import com.procurement.modules.pr.dto.*;
 import com.procurement.modules.pr.entities.PurchaseRequisition;
+import com.procurement.modules.pr.entities.PurchaseRequisitionItem;
 import com.procurement.modules.pr.repositories.PurchaseRequisitionRepository;
 import com.procurement.modules.workflow.dto.DecisionRequest;
 import com.procurement.modules.workflow.services.WorkflowService;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -26,8 +28,7 @@ public class PurchaseRequisitionService {
     Map.entry("title", "title"),
     Map.entry("department", "department"),
     Map.entry("requestedBy", "requestedBy"),
-    Map.entry("amount", "amount"),
-    Map.entry("quantity", "quantity"),
+    Map.entry("totalEstimatedAmount", "totalEstimatedAmount"),
     Map.entry("status", "status"),
     Map.entry("stage", "stage"),
     Map.entry("emergency", "emergency"),
@@ -39,6 +40,7 @@ public class PurchaseRequisitionService {
   private final WorkflowService workflowService;
   private final AuditService auditService;
 
+  @Transactional(readOnly = true)
   public PageResponse<PurchaseRequisitionResponse> getPurchaseRequisitions(
     int page,
     int limit,
@@ -89,35 +91,37 @@ public class PurchaseRequisitionService {
     return PageResponse.from(repository.findAll(pageable).map(PurchaseRequisitionResponse::from));
   }
 
+  @Transactional(readOnly = true)
   public PurchaseRequisitionResponse getById(Long id) {
     return PurchaseRequisitionResponse.from(require(id));
   }
 
   @Transactional
   public PurchaseRequisitionResponse create(CreatePurchaseRequisitionRequest request) {
-    PurchaseRequisition pr = repository.save(
-      PurchaseRequisition.builder()
-        .title(request.title().trim())
-        .description(request.description())
-        .department(request.department().trim())
-        .requestedBy(request.requestedByLabel())
-        .amount(request.amount())
-        .quantity(request.quantity())
-        .status("DRAFT")
-        .stage("PR Preparation")
-        .emergency(request.emergency())
-        .justification(request.justification())
-        .build()
-    );
+    PurchaseRequisition pr = PurchaseRequisition.builder()
+      .title(request.title().trim())
+      .description(request.description())
+      .department(request.department().trim())
+      .requestedBy(request.requestedByLabel())
+      .status("DRAFT")
+      .stage("PR Preparation")
+      .emergency(request.emergency())
+      .requiredDate(request.requiredDate())
+      .justification(request.justification())
+      .build();
+    pr.replaceItems(toItems(request.items()));
+    recalculateTotal(pr);
+    PurchaseRequisition saved = repository.save(pr);
+    saved.setPrNumber("PR-" + saved.getId());
     auditService.record(
       "PR",
-      pr.getId(),
+      saved.getId(),
       "PR_CREATED",
-      pr.getRequestedBy(),
+      saved.getRequestedBy(),
       "Purchase requisition drafted",
       null
     );
-    return PurchaseRequisitionResponse.from(pr);
+    return PurchaseRequisitionResponse.from(saved);
   }
 
   @Transactional
@@ -128,10 +132,11 @@ public class PurchaseRequisitionService {
     if (request.title() != null) pr.setTitle(request.title().trim());
     if (request.description() != null) pr.setDescription(request.description());
     if (request.department() != null) pr.setDepartment(request.department().trim());
-    if (request.amount() != null) pr.setAmount(request.amount());
-    if (request.quantity() != null) pr.setQuantity(request.quantity());
     if (request.emergency() != null) pr.setEmergency(request.emergency());
+    if (request.requiredDate() != null) pr.setRequiredDate(request.requiredDate());
     if (request.justification() != null) pr.setJustification(request.justification());
+    if (request.items() != null) pr.replaceItems(toItems(request.items()));
+    recalculateTotal(pr);
     pr.setRequestedBy(request.requestedByLabel());
 
     auditService.record(
@@ -157,11 +162,12 @@ public class PurchaseRequisitionService {
   public PurchaseRequisitionResponse submit(Long id, DecisionRequest request) {
     PurchaseRequisition pr = require(id);
     if (!"DRAFT".equals(pr.getStatus())) throw new BadRequestException("PR must be DRAFT");
+    if (pr.getItems().isEmpty()) throw new BadRequestException("PR requires at least one item");
     pr.setStatus("SUBMITTED");
     pr.setStage("Approval");
     workflowService.startPrApproval(
       pr.getId(),
-      pr.getAmount(),
+      pr.getTotalEstimatedAmount(),
       pr.isEmergency(),
       request.actorLabel()
     );
@@ -227,5 +233,47 @@ public class PurchaseRequisitionService {
     if (status == null || status.isBlank()) return null;
     String normalized = status.trim().toUpperCase();
     return normalized;
+  }
+
+  private List<PurchaseRequisitionItem> toItems(List<PurchaseRequisitionItemRequest> requests) {
+    if (requests == null || requests.isEmpty()) {
+      throw new BadRequestException("PR requires at least one item");
+    }
+    return java.util.stream.IntStream
+      .range(0, requests.size())
+      .mapToObj(index -> {
+        PurchaseRequisitionItemRequest request = requests.get(index);
+        BigDecimal estimatedTotal = request.quantity().multiply(request.estimatedUnitPrice());
+        return PurchaseRequisitionItem.builder()
+          .lineNo(index + 1)
+          .itemType(request.itemType().trim().toUpperCase())
+          .itemName(request.itemName().trim())
+          .description(request.description())
+          .specification(request.specification())
+          .quantity(request.quantity())
+          .unitOfMeasure(request.unitOfMeasure().trim())
+          .estimatedUnitPrice(request.estimatedUnitPrice())
+          .estimatedTotalAmount(estimatedTotal)
+          .requiredDate(request.requiredDate())
+          .deliveryLocation(trimToNull(request.deliveryLocation()))
+          .budgetCode(trimToNull(request.budgetCode()))
+          .notes(request.notes())
+          .build();
+      })
+      .toList();
+  }
+
+  private void recalculateTotal(PurchaseRequisition pr) {
+    BigDecimal total = pr
+      .getItems()
+      .stream()
+      .map(PurchaseRequisitionItem::getEstimatedTotalAmount)
+      .reduce(BigDecimal.ZERO, BigDecimal::add);
+    pr.setTotalEstimatedAmount(total);
+  }
+
+  private String trimToNull(String value) {
+    if (value == null || value.isBlank()) return null;
+    return value.trim();
   }
 }
